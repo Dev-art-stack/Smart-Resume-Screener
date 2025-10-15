@@ -83,7 +83,3 @@ http://127.0.0.1:5000
 ## 🎥 Demo
 
 📸 https://drive.google.com/file/d/17sPqnIoDSOzsJ7MNU9puDVDPM4EYyvat/view?usp=drive_link
-
-```
-
-
