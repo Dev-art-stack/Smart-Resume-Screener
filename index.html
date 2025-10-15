@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Resume Screener</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 50;
+        }
+        .modal {
+            max-width: 500px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto px-4 py-8 md:py-12">
+        <header class="text-center mb-10 md:mb-16">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Smart Resume Screener</h1>
+            <p class="mt-3 text-lg text-gray-600 max-w-2xl mx-auto">
+                Instantly match candidates to the right roles. Upload a resume and select a job description to get started.
+            </p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
+            <div class="lg:col-span-1">
+                <div class="card p-6 sticky top-8">
+                    <h2 class="text-2xl font-semibold mb-6 text-gray-800">Screen New Candidate</h2>
+                    <form id="screen-form" class="space-y-6">
+                        <div>
+                            <label for="job-description-select" class="block text-sm font-medium text-gray-700 mb-1">Job Description</label>
+                            <div class="flex items-center space-x-2">
+                                <select id="job-description-select" class="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                    <option value="">Loading job descriptions...</option>
+                                </select>
+                                <button type="button" id="add-job-btn" class="p-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" title="Add New Job Description">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="resume-file" class="block text-sm font-medium text-gray-700 mb-1">Resume (PDF or TXT)</label>
+                            <input type="file" id="resume-file" required accept=".pdf,.txt" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        </div>
+                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <span id="submit-text">Screen Resume</span>
+                            <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        </button>
+                    </form>
+                    <div id="form-error" class="mt-4 text-sm text-red-600"></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">Shortlisted Candidates</h2>
+                    <div class="flex items-center space-x-2">
+                         <select id="filter-job-select" class="block w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <option value="all">Filter by Job (All)</option>
+                         </select>
+                         <button type="button" id="delete-job-btn" disabled class="p-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:bg-gray-300 disabled:cursor-not-allowed" title="Delete Selected Job">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                         </button>
+                    </div>
+                </div>
+                <div id="candidates-list" class="space-y-4">
+                    <!-- Candidate cards will be inserted here by JavaScript -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Job Description Modal -->
+    <div id="add-job-modal" class="fixed inset-0 modal-overlay flex items-center justify-center p-4 hidden">
+        <div class="card modal p-6">
+            <h3 class="text-xl font-semibold mb-4">Add New Job Description</h3>
+            <form id="add-job-form" class="space-y-4">
+                <div>
+                    <label for="job-title-input" class="block text-sm font-medium text-gray-700">Job Title</label>
+                    <input type="text" id="job-title-input" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="job-description-input" class="block text-sm font-medium text-gray-700">Full Description Text</label>
+                    <textarea id="job-description-input" required rows="10" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                </div>
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" id="cancel-add-job" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none">Save Job</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="fixed inset-0 modal-overlay flex items-center justify-center p-4 hidden">
+        <div class="card modal p-6">
+            <h3 class="text-xl font-semibold mb-2">Confirm Deletion</h3>
+            <p id="confirm-message" class="text-gray-600 mb-6">Are you sure? This action cannot be undone.</p>
+            <div class="flex justify-end space-x-3">
+                <button type="button" id="cancel-delete-btn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none">Cancel</button>
+                <button type="button" id="confirm-delete-btn" class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700 focus:outline-none">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:5001';
+
+        // --- DOM Element Selections ---
+        const screenForm = document.getElementById('screen-form');
+        const jobDescriptionSelect = document.getElementById('job-description-select');
+        const resumeFile = document.getElementById('resume-file');
+        const candidatesList = document.getElementById('candidates-list');
+        const formError = document.getElementById('form-error');
+        const submitText = document.getElementById('submit-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        
+        const addJobModal = document.getElementById('add-job-modal');
+        const addJobBtn = document.getElementById('add-job-btn');
+        const cancelAddJobBtn = document.getElementById('cancel-add-job');
+        const addJobForm = document.getElementById('add-job-form');
+        
+        const filterJobSelect = document.getElementById('filter-job-select');
+        const deleteJobBtn = document.getElementById('delete-job-btn');
+
+        const confirmModal = document.getElementById('confirm-modal');
+        const confirmMessage = document.getElementById('confirm-message');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+
+        // --- State ---
+        let itemToDelete = { id: null, type: null };
+
+        // --- Core Functions ---
+        async function fetchJobDescriptions() {
+            try {
+                const response = await fetch(`${API_URL}/job-descriptions`);
+                if (!response.ok) throw new Error('Could not load jobs.');
+                const jobs = await response.json();
+                populateDropdown(jobDescriptionSelect, jobs, "Select a job description");
+                populateDropdown(filterJobSelect, jobs, "Filter by Job (All)", true);
+            } catch (error) {
+                jobDescriptionSelect.innerHTML = `<option value="">Error loading jobs</option>`;
+            }
+        }
+
+        function populateDropdown(dropdownElement, items, defaultText, isFilter = false) {
+            const currentValue = dropdownElement.value;
+            dropdownElement.innerHTML = '';
+            const defaultOption = document.createElement('option');
+            defaultOption.value = isFilter ? "all" : "";
+            defaultOption.textContent = defaultText;
+            if (!isFilter) defaultOption.disabled = true;
+            dropdownElement.appendChild(defaultOption);
+
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.title;
+                dropdownElement.appendChild(option);
+            });
+            dropdownElement.value = currentValue;
+             if (!dropdownElement.value) {
+                dropdownElement.selectedIndex = 0;
+            }
+        }
+        
+        async function fetchCandidates(jobId = 'all') {
+            try {
+                const url = new URL(`${API_URL}/candidates`);
+                if (jobId !== 'all') {
+                    url.searchParams.append('job_id', jobId);
+                }
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to fetch candidates.');
+                const candidates = await response.json();
+
+                candidatesList.innerHTML = ''; 
+                
+                if (candidates.length === 0) {
+                     candidatesList.innerHTML = `
+                        <div class="text-center py-10 px-6 bg-gray-50 rounded-lg">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+                            <h3 class="mt-2 text-sm font-medium text-gray-900">No Candidates Found</h3>
+                            <p class="mt-1 text-sm text-gray-500">${jobId === 'all' ? 'Screen a new resume to get started.' : 'No candidates match the current filter.'}</p>
+                        </div>`;
+                } else {
+                    candidates.forEach((candidate, index) => {
+                        const isLatest = index === 0 && jobId === 'all';
+                        const card = createCandidateCard(candidate, isLatest);
+                        candidatesList.appendChild(card);
+                    });
+                }
+            } catch (error) {
+                candidatesList.innerHTML = `<div class="card p-4 text-red-600">Error: Could not load candidates. Is the backend server running?</div>`;
+            }
+        }
+
+        function createCandidateCard(candidate, isLatest = false) {
+            const card = document.createElement('div');
+            card.className = 'card p-5';
+            const scoreColor = candidate.match_score >= 8 ? 'text-green-600' : candidate.match_score >= 5 ? 'text-yellow-600' : 'text-red-600';
+            const latestBadge = isLatest ? '<span class="ml-2 px-2 py-1 text-xs font-semibold bg-indigo-100 text-indigo-800 rounded-full">Latest</span>' : '';
+
+            card.innerHTML = `
+                <div class="flex items-start justify-between">
+                    <div class="flex items-center space-x-3">
+                        <p class="font-semibold text-lg text-gray-800">${candidate.file_name}</p>
+                        <a href="${API_URL}/uploads/${candidate.file_name}" download class="text-gray-400 hover:text-indigo-600 transition-colors" title="Download Resume"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></a>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="text-right">
+                            <p class="text-sm text-gray-500 mb-1">Match Score</p>
+                            <span class="font-bold text-2xl ${scoreColor}">${candidate.match_score.toFixed(1)}/10</span>
+                        </div>
+                        <button data-type="candidate" data-id="${candidate.id}" class="delete-btn text-gray-400 hover:text-red-600 transition-colors" title="Delete Candidate"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <p class="text-sm text-gray-500 mt-1">Job: ${candidate.job_title}</p>
+                    ${latestBadge}
+                </div>
+                <div class="mt-4">
+                    <p class="text-sm font-medium text-gray-800 mb-1">Justification:</p>
+                    <p class="text-sm text-gray-600">${candidate.justification}</p>
+                </div>
+                <div class="mt-4">
+                    <p class="text-sm font-medium text-gray-800 mb-2">Extracted Skills:</p>
+                    <div class="flex flex-wrap gap-2">
+                        ${candidate.extracted_skills.map(skill => `<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full">${skill}</span>`).join('')}
+                    </div>
+                </div>`;
+            return card;
+        }
+
+        // --- Form Handlers ---
+        async function handleScreenFormSubmit(event) {
+            event.preventDefault();
+            formError.textContent = '';
+            setLoading(true);
+
+            const formData = new FormData();
+            formData.append('resume', resumeFile.files[0]);
+            formData.append('job_description_id', jobDescriptionSelect.value);
+
+            try {
+                const response = await fetch(`${API_URL}/screen`, { method: 'POST', body: formData });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Screening failed.');
+                }
+                screenForm.reset();
+                // After screening, fetch all candidates to show the latest at the top
+                await fetchCandidates('all');
+                // Also reset the filter dropdown to 'All'
+                filterJobSelect.value = 'all';
+            } catch (error) {
+                formError.textContent = `Error: ${error.message}`;
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function handleAddJobFormSubmit(event) {
+            event.preventDefault();
+            const title = document.getElementById('job-title-input').value;
+            const description_text = document.getElementById('job-description-input').value;
+            try {
+                const response = await fetch(`${API_URL}/job-descriptions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, description_text })
+                });
+                if (!response.ok) throw new Error('Failed to save job.');
+                await fetchJobDescriptions();
+                toggleModal(false);
+                addJobForm.reset();
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        // --- UI Helpers ---
+        function setLoading(isLoading) {
+            submitText.classList.toggle('hidden', isLoading);
+            loadingSpinner.classList.toggle('hidden', !isLoading);
+            screenForm.querySelector('button[type="submit"]').disabled = isLoading;
+        }
+        
+        function toggleModal(show) {
+            addJobModal.classList.toggle('hidden', !show);
+        }
+
+        function openConfirmationModal(type, id, name) {
+            itemToDelete = { id, type };
+            confirmMessage.textContent = `Are you sure you want to delete "${name}"? This action cannot be undone.`;
+            confirmModal.classList.remove('hidden');
+        }
+
+        function closeConfirmationModal() {
+            confirmModal.classList.add('hidden');
+            itemToDelete = { id: null, type: null };
+        }
+
+        async function handleConfirmDelete() {
+            if (!itemToDelete.id || !itemToDelete.type) return;
+            const { id, type } = itemToDelete;
+            const url = `${API_URL}/${type}s/${id}`;
+            try {
+                const response = await fetch(url, { method: 'DELETE' });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Deletion failed.');
+                }
+                if (type === 'candidate') {
+                    await fetchCandidates(filterJobSelect.value);
+                } else if (type === 'job-description') {
+                    await fetchJobDescriptions();
+                    await fetchCandidates('all');
+                    filterJobSelect.value = 'all';
+                    deleteJobBtn.disabled = true;
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            } finally {
+                closeConfirmationModal();
+            }
+        }
+
+        // --- Event Listeners ---
+        screenForm.addEventListener('submit', handleScreenFormSubmit);
+        addJobBtn.addEventListener('click', () => toggleModal(true));
+        cancelAddJobBtn.addEventListener('click', () => toggleModal(false));
+        addJobModal.addEventListener('click', (e) => { if (e.target === addJobModal) toggleModal(false); });
+        addJobForm.addEventListener('submit', handleAddJobFormSubmit);
+        
+        filterJobSelect.addEventListener('change', (e) => {
+            fetchCandidates(e.target.value);
+            deleteJobBtn.disabled = e.target.value === 'all';
+        });
+
+        deleteJobBtn.addEventListener('click', () => {
+            const selectedJobId = filterJobSelect.value;
+            if (selectedJobId && selectedJobId !== 'all') {
+                const selectedJobText = filterJobSelect.options[filterJobSelect.selectedIndex].text;
+                openConfirmationModal('job-description', selectedJobId, selectedJobText);
+            }
+        });
+
+        candidatesList.addEventListener('click', (e) => {
+            const deleteButton = e.target.closest('.delete-btn');
+            if (deleteButton) {
+                const { type, id } = deleteButton.dataset;
+                const fileName = deleteButton.closest('.card').querySelector('p').textContent;
+                openConfirmationModal(type, id, fileName);
+            }
+        });
+        
+        confirmDeleteBtn.addEventListener('click', handleConfirmDelete);
+        cancelDeleteBtn.addEventListener('click', closeConfirmationModal);
+        confirmModal.addEventListener('click', (e) => { if (e.target === confirmModal) closeConfirmationModal(); });
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchJobDescriptions();
+            fetchCandidates();
+        });
+
+    </script>
+</body>
+</html>
+
